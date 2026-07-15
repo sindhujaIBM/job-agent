@@ -1,0 +1,27 @@
+{
+  "name": "job-agent",
+  "version": "1.0.0",
+  "description": "Daily remote job scanner — matches We Work Remotely + RemoteOK listings against Sindhuja and Muni's profiles via Claude on Bedrock, emails digests, and on approval triggers resume/cover letter generation in the Personal Branding repo",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "deploy": "npm run build && npx serverless deploy --stage prod",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.0.0",
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/client-lambda": "^3.0.0",
+    "@aws-sdk/client-ses": "^3.0.0",
+    "@aws-sdk/client-ssm": "^3.0.0",
+    "@aws-sdk/lib-dynamodb": "^3.0.0",
+    "fast-xml-parser": "^4.3.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.0",
+    "@types/node": "^20.19.41",
+    "serverless": "^3.0.0",
+    "typescript": "^5.0.0"
+  }
+}

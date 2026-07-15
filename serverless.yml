@@ -1,0 +1,130 @@
+service: job-agent
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ca-west-1
+  stage: ${opt:stage, 'prod'}
+  environment:
+    QUEUE_TABLE: remote-jobs-scan-queue
+    SINDHUJA_TABLE: remote-jobs-sindhu
+    MUNI_TABLE: remote-jobs-muni
+    APPROVAL_BASE_URL: !Sub 'https://${ApiGatewayRestApi}.execute-api.ca-west-1.amazonaws.com/prod'
+    SINDHUJA_EMAIL: onvsindhu@gmail.com
+    MUNI_EMAIL: munivku@gmail.com
+    STAGE: ${self:provider.stage}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Query
+            - dynamodb:Scan
+          Resource:
+            - !GetAtt QueueTable.Arn
+            - !GetAtt SindhuJobsTable.Arn
+            - !GetAtt MuniJobsTable.Arn
+        - Effect: Allow
+          Action:
+            - bedrock:InvokeModel
+          Resource: '*'
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+          Resource: '*'
+        - Effect: Allow
+          Action:
+            - ssm:GetParameter
+          Resource:
+            - !Sub 'arn:aws:ssm:ca-west-1:${AWS::AccountId}:parameter/job-agent/prod/*'
+            # reuses signal-agent's existing GitHub token instead of provisioning a second copy
+            - !Sub 'arn:aws:ssm:ca-west-1:${AWS::AccountId}:parameter/signal-agent/prod/github-token'
+        - Effect: Allow
+          Action:
+            - lambda:InvokeFunction
+          Resource: !Sub 'arn:aws:lambda:ca-west-1:${AWS::AccountId}:function:job-agent-${self:provider.stage}-*'
+
+functions:
+  job-scanner:
+    handler: .build/handlers/job-scanner.handler
+    timeout: 60
+    memorySize: 256
+    events:
+      - schedule:
+          # 7:30am MDT = 13:30 UTC (summer). Adjust to 14:30 UTC in winter (MST).
+          rate: cron(30 13 * * ? *)
+          name: job-agent-daily-scan
+          description: Daily remote job scan — triggers job-scanner -> job-evaluator -> job-notifier in sequence
+
+  job-evaluator:
+    handler: .build/handlers/job-evaluator.handler
+    timeout: 120
+    memorySize: 256
+
+  job-notifier:
+    handler: .build/handlers/job-notifier.handler
+    timeout: 30
+    memorySize: 128
+
+  job-approver:
+    handler: .build/handlers/job-approver.handler
+    timeout: 30
+    memorySize: 128
+    events:
+      - http:
+          path: /approve-job
+          method: get
+          cors: true
+
+resources:
+  Resources:
+    QueueTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: remote-jobs-scan-queue
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: jobId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: jobId
+            KeyType: HASH
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
+
+    SindhuJobsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: remote-jobs-sindhu
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: jobId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: jobId
+            KeyType: HASH
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
+
+    MuniJobsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: remote-jobs-muni
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: jobId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: jobId
+            KeyType: HASH
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true

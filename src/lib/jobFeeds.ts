@@ -10,14 +10,19 @@ const WWR_SOURCES = [
 ];
 
 const REMOTEOK_URL = 'https://remoteok.com/api';
+// category= is silently ignored by the public endpoint (confirmed: filtered and
+// unfiltered calls return the identical job set) — pull everything and let the
+// evaluator's scoring pass do the real filtering, same as RemoteOK's unsorted feed.
+const REMOTIVE_URL = 'https://remotive.com/api/remote-jobs';
 const USER_AGENT = 'job-agent/1.0 (personal job scanner; https://maidlink.ca)';
 
 export async function fetchAllJobs(): Promise<RawJobItem[]> {
-  const [wwr, remoteok] = await Promise.all([
+  const [wwr, remoteok, remotive] = await Promise.all([
     fetchWeWorkRemotely(),
     fetchRemoteOk(),
+    fetchRemotive(),
   ]);
-  return [...wwr, ...remoteok];
+  return [...wwr, ...remoteok, ...remotive];
 }
 
 async function fetchWeWorkRemotely(): Promise<RawJobItem[]> {
@@ -99,6 +104,36 @@ async function fetchRemoteOk(): Promise<RawJobItem[]> {
       }));
   } catch (err) {
     console.error('Failed to fetch RemoteOK:', err);
+    return [];
+  }
+}
+
+async function fetchRemotive(): Promise<RawJobItem[]> {
+  try {
+    const res = await fetch(REMOTIVE_URL, {
+      headers: { 'User-Agent': USER_AGENT },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status} from ${REMOTIVE_URL}`);
+
+    const data = (await res.json()) as { jobs?: unknown[] };
+    const jobs = data.jobs ?? [];
+
+    return jobs
+      .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
+      .filter(item => item.url && item.title)
+      .map(item => ({
+        url: String(item.url),
+        title: String(item.title),
+        company: String(item.company_name ?? 'Unknown'),
+        location: String(item.candidate_required_location || 'Remote'),
+        source: 'remotive' as JobSource,
+        sourceCategory: item.category ? String(item.category) : null,
+        description: stripHtml(String(item.description ?? '')),
+        postedAt: String(item.publication_date ?? new Date().toISOString()),
+      }));
+  } catch (err) {
+    console.error('Failed to fetch Remotive:', err);
     return [];
   }
 }

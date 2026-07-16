@@ -1,7 +1,7 @@
 # CLAUDE.md — Job Agent
 
 ## What This Is
-A cloud-based daily job-matching agent that runs on AWS. It scans We Work Remotely and RemoteOK, scores each listing against Sindhuja's and Muni's individual fit criteria using Claude Haiku on Bedrock, and emails each of them their own digest. Clicking "Generate Resume + Cover Letter" in the email triggers a GitHub Actions workflow in the `Personal Branding` repo that runs the real `/sindhu-resume` or `/muni-resume` slash command against that job — nothing is auto-submitted anywhere; the human still reviews the PDF before applying.
+A cloud-based daily job-matching agent that runs on AWS. It scans We Work Remotely, RemoteOK, and Remotive, scores each listing against Sindhuja's and Muni's individual fit criteria using Claude Haiku on Bedrock, and emails each of them their own digest. Clicking "Generate Resume + Cover Letter" in the email triggers a GitHub Actions workflow in the `Personal Branding` repo that runs the real `/sindhu-resume` or `/muni-resume` slash command against that job — nothing is auto-submitted anywhere; the human still reviews the PDF before applying.
 
 Sibling project to `signal-agent` (same account, same conventions) — see that repo's CLAUDE.md for the news/LinkedIn-draft pipeline this one is modeled on.
 
@@ -18,7 +18,7 @@ Sibling project to `signal-agent` (same account, same conventions) — see that 
 ## Architecture (4 Lambdas)
 ```
 EventBridge Scheduler (7:30am MT daily)
-  → job-scanner    — fetch WWR RSS + RemoteOK API, dedup, save new jobs to remote-jobs-scan-queue
+  → job-scanner    — fetch WWR RSS + RemoteOK API + Remotive API, dedup, save new jobs to remote-jobs-scan-queue
   → job-evaluator  — Claude scores each job 0-10 for Sindhuja AND Muni in one call
                       writes a row to remote-jobs-sindhu / remote-jobs-muni for each score >= 6
   → job-notifier   — one digest email per person (only if they have new matches), each job has
@@ -41,7 +41,7 @@ EventBridge Scheduler (7:30am MT daily)
 ## Key Files
 | File | Purpose |
 |---|---|
-| `src/lib/jobFeeds.ts` | Fetch + normalize We Work Remotely RSS and RemoteOK API |
+| `src/lib/jobFeeds.ts` | Fetch + normalize We Work Remotely RSS, RemoteOK API, and Remotive API |
 | `src/lib/jobsDb.ts` | DynamoDB helpers for all three tables |
 | `src/lib/bedrock.ts` | Claude Haiku via Bedrock, dual-score prompt |
 | `src/lib/ses.ts` | Digest email (approve/reject links per job) |

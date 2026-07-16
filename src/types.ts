@@ -1,6 +1,6 @@
 export type Person = 'sindhuja' | 'muni';
 
-export type JobSource = 'weworkremotely' | 'remoteok';
+export type JobSource = 'weworkremotely' | 'remoteok' | 'remotive';
 
 // Status on the two person-scoped match tables (remote-jobs-sindhu / remote-jobs-muni)
 export type JobStatus =

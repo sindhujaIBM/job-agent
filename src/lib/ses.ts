@@ -41,7 +41,7 @@ ${i + 1}. ${job.title} — ${job.company}
 
 ==========================
 Approval links expire in 48 hours.
-Source note: listings via We Work Remotely and Remote OK (remoteok.com).
+Source note: listings via We Work Remotely, Remote OK (remoteok.com), and Remotive (remotive.com).
   `.trim();
 
   await client.send(new SendEmailCommand({

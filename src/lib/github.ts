@@ -24,18 +24,26 @@ export async function saveJobDescriptionToRepo(slug: string, jd: string): Promis
   const token = await getGithubToken();
   const filePath = `career/output/${slug}/jd.txt`;
   const apiUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filePath}`;
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    'User-Agent': 'job-agent/1.0',
+    Accept: 'application/vnd.github+json',
+  };
+
+  // GitHub's Contents API requires the current file's sha to overwrite an existing file
+  // (a bare PUT 422s with "sha wasn't supplied") — a re-approval of the same company slug
+  // is a real case (job-agent's idempotent-save behavior means a dismissed-then-reapproved
+  // job reuses the same slug), so this can't assume the file is new.
+  const existing = await fetch(apiUrl, { headers });
+  const sha = existing.ok ? ((await existing.json()) as { sha: string }).sha : undefined;
 
   const res = await fetch(apiUrl, {
     method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'User-Agent': 'job-agent/1.0',
-      Accept: 'application/vnd.github+json',
-    },
+    headers: { ...headers, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       message: `job-agent: save JD for ${slug}`,
       content: Buffer.from(jd).toString('base64'),
+      ...(sha ? { sha } : {}),
     }),
   });
 

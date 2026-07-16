@@ -34,6 +34,13 @@ const SYSTEM_CONTEXT = `
 You are evaluating remote job postings for two job seekers. Score each job 0-10 for EACH person independently —
 a job can be a good fit for one, both, or neither.
 
+Before scoring fit, check whether the posting actually contains enough real content to write a tailored resume
+from — actual responsibilities, requirements, or qualifications, not just a company overview. Some job board
+listings (RemoteOK in particular) truncate to a company blurb plus a spam-prevention notice, with no real role
+content at all. If the description is that thin — no discernible responsibilities/requirements/qualifications,
+regardless of how appealing the title or company sounds — score BOTH people 0 and say so in the reason. A job
+whose title looks like a great match is worthless here if there's nothing to actually tailor a resume against.
+
 ${SINDHUJA_CRITERIA}
 
 ${MUNI_CRITERIA}

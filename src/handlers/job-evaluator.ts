@@ -39,6 +39,10 @@ ${SINDHUJA_CRITERIA}
 ${MUNI_CRITERIA}
 `.trim();
 
+// job.description is stored full-length (job-approver needs the complete text later to
+// generate a real resume) — cap it here just for prompt size/cost, scoring doesn't need more.
+const EVAL_DESCRIPTION_CHARS = 1500;
+
 function buildPrompt(job: QueueItem): string {
   return `${SYSTEM_CONTEXT}
 
@@ -47,7 +51,7 @@ Title: ${job.title}
 Company: ${job.company}
 Location: ${job.location}
 Source: ${job.source}
-Description: ${job.description}
+Description: ${job.description.slice(0, EVAL_DESCRIPTION_CHARS)}
 
 Return ONLY valid JSON (no markdown, no explanation):
 { "sindhuja_score": number_0_to_10, "sindhuja_reason": "one sentence", "muni_score": number_0_to_10, "muni_reason": "one sentence" }`;

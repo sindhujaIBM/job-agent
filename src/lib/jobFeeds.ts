@@ -55,7 +55,11 @@ async function fetchWeWorkRemotely(): Promise<RawJobItem[]> {
           location: String(item.region ?? 'Remote'),
           source: 'weworkremotely',
           sourceCategory: String(item.category ?? source.name),
-          description: stripHtml(String(item.description ?? '')).slice(0, 500),
+          // Full text, not truncated here — this is the only copy of the JD job-approver
+          // will have to work with later (RemoteOK blocks WebFetch on individual job pages
+          // with a 403, so re-fetching live at approval time isn't reliable). Truncate only
+          // at specific call sites that need a shorter version (e.g. the evaluation prompt).
+          description: stripHtml(String(item.description ?? '')),
           postedAt: String(item.pubDate ?? new Date().toISOString()),
         });
       }
@@ -90,7 +94,7 @@ async function fetchRemoteOk(): Promise<RawJobItem[]> {
         location: String(item.location || 'Remote'),
         source: 'remoteok' as JobSource,
         sourceCategory: Array.isArray(item.tags) ? (item.tags as unknown[]).slice(0, 5).join(', ') : null,
-        description: stripHtml(String(item.description ?? '')).slice(0, 500),
+        description: stripHtml(String(item.description ?? '')),
         postedAt: String(item.date ?? new Date().toISOString()),
       }));
   } catch (err) {

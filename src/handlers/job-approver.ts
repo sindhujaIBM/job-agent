@@ -2,7 +2,7 @@ import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { createHmac } from 'crypto';
 import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 import { getMatchedJobByToken, updateMatchedJob } from '../lib/jobsDb';
-import { saveJobDescriptionToRepo, dispatchResumeGeneration } from '../lib/github';
+import { dispatchResumeGeneration } from '../lib/github';
 import type { Person } from '../types';
 
 const ssm = new SSMClient({ region: 'ca-west-1' });
@@ -76,8 +76,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
   const slug = slugify(job.company);
 
   try {
-    const jdPath = await saveJobDescriptionToRepo(slug, job.description);
-    await dispatchResumeGeneration({ person, slug, company: job.company, role: job.title, jdPath });
+    await dispatchResumeGeneration({ person, slug, company: job.company, role: job.title, url: job.url });
   } catch (err) {
     console.error(`Failed to kick off resume generation for ${jobId}:`, err);
     return html(500, `Approved, but couldn't start resume generation automatically. Run <code>/${person === 'sindhuja' ? 'sindhu' : 'muni'}-resume</code> manually with this job's JD.`);

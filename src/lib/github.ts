@@ -16,45 +16,23 @@ async function getGithubToken(): Promise<string> {
   return res.Parameter?.Value ?? '';
 }
 
-export async function saveJobDescriptionToRepo(slug: string, jd: string): Promise<string> {
-  const token = await getGithubToken();
-  const filePath = `career/output/${slug}/jd.txt`;
-  const apiUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${filePath}`;
-
-  const res = await fetch(apiUrl, {
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      'User-Agent': 'job-agent/1.0',
-      Accept: 'application/vnd.github+json',
-    },
-    body: JSON.stringify({
-      message: `job-agent: save JD for ${slug}`,
-      content: Buffer.from(jd).toString('base64'),
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`GitHub API error ${res.status} saving ${filePath}: ${body}`);
-  }
-
-  return filePath;
-}
-
+// Deliberately does NOT pre-save a JD file. MatchedJob.description is truncated to 500
+// chars (fine for scoring/email, not enough for a real resume — a real run against a
+// truncated copy produced a garbled resume + cover letter). The dispatched workflow uses
+// /sindhu-resume and /muni-resume's own --url mode instead, which WebFetches the live,
+// full posting directly — no truncated copy in the loop at all.
 export async function dispatchResumeGeneration({
   person,
   slug,
   company,
   role,
-  jdPath,
+  url,
 }: {
   person: Person;
   slug: string;
   company: string;
   role: string;
-  jdPath: string;
+  url: string;
 }): Promise<void> {
   const token = await getGithubToken();
   const apiUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/dispatches`;
@@ -69,7 +47,7 @@ export async function dispatchResumeGeneration({
     },
     body: JSON.stringify({
       event_type: 'job-approved',
-      client_payload: { person, slug, company, role, jdPath },
+      client_payload: { person, slug, company, role, url },
     }),
   });
 
